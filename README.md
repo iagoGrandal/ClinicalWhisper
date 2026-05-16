@@ -43,3 +43,11 @@ stt = SpeechToText(model_name="base", language="es")
 texto = stt.listen(seconds=5)
 print(texto)
 ```
+
+### Uso con interfaz web
+
+```bash
+python app.py
+```
+
+Abre `http://127.0.0.1:5000` en el navegador. La interfaz permite elegir duracion y idioma, grabar desde el micrófono, ver la transcripcion y corregirla en una caja de texto.
