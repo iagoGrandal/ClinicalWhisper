@@ -24,6 +24,7 @@ class SpeechToText:
     _model: Any = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
+        """Load the requested Whisper model after dataclass initialization."""
         self._model = whisper.load_model(self.model_name)
 
     def listen(self, seconds: float = 5.0) -> str:

@@ -4,6 +4,7 @@ import argparse
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse CLI arguments for local microphone transcription."""
     parser = argparse.ArgumentParser(
         description="Record audio from the microphone and transcribe it locally with Whisper."
     )
@@ -30,6 +31,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Run the local Whisper transcription workflow from the command line."""
     args = parse_args()
     language = args.language or None
 
