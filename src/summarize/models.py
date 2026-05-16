@@ -73,6 +73,7 @@ class SessionRecord:
     keypoints: list[str]
     model: str
     patient_context: dict[str, str] = field(default_factory=dict)
+    updated_at: str = ""
 
     def to_dict(self) -> dict[str, object]:
         """Return a JSON-ready representation of a patient session."""

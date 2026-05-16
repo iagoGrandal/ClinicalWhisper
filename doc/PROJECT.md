@@ -2,123 +2,174 @@
 
 Aplicacion local orientada a personal medico para registrar consultas clinicas a partir de conversaciones habladas, sin depender de servicios externos.
 
-## Descripcion del proyecto
+## Objetivo del proyecto
 
-El objetivo es construir una herramienta que funcione de manera 100% local y que permita:
+Construir una herramienta 100% local que permita:
 
 - Capturar audio entre paciente y profesional.
 - Transcribir el audio con Whisper.
 - Procesar la transcripcion con modelos open source ejecutados en Ollama.
-- Generar automaticamente:
-  - Resumen de la conversacion.
-  - Motivo de consulta.
-  - Puntos clave clinicos.
-- Guardar cada consulta en un historial local por paciente.
+- Generar automaticamente un resumen estructurado de la consulta.
+- Guardar cada sesion en un historial local por paciente.
+- Revisar y editar sesiones ya guardadas desde la propia interfaz web.
 
-## Estado actual del repositorio
+## Estado actual
 
-### Ya implementado
+### Implementado
 
 - Backend Flask local en `app.py`.
-- Captura de audio desde navegador y envio al backend.
-- Transcripcion local con Whisper mediante `src/speech/`.
-- Modulo `src/summarize/` para resumir con Ollama usando salida JSON estricta.
-- Estrategia de resumen por fases:
-  - troceado de la transcripcion,
-  - resumen parcial por bloques,
-  - resumen final estructurado.
-- Persistencia local en JSON dentro de `data/patients/`.
-- Interfaz web para:
+- Interfaz principal en `template/main.html` para:
   - introducir datos del paciente,
-  - grabar audio,
+  - grabar audio desde navegador,
+  - transcribir con Whisper,
   - corregir la transcripcion,
   - seleccionar modelo Ollama,
   - generar resumen, motivo de consulta y puntos clave.
-- Pruebas automatizadas de normalizacion, chunking, parseo, persistencia y endpoint.
+- Modulo `src/speech/` para transcripcion local.
+- Modulo `src/summarize/` para resumen clinico con Ollama:
+  - normalizacion de datos,
+  - construccion de prompts,
+  - troceado de transcripciones largas,
+  - resumen por bloques,
+  - resumen final estructurado,
+  - persistencia local en JSON.
+- Persistencia local en `data/patients/`, agrupando sesiones por paciente.
+- Vista de historiales en `template/history.html` para:
+  - listar pacientes guardados,
+  - listar sesiones de cada paciente,
+  - abrir una sesion concreta,
+  - editar transcripcion y datos clinicos,
+  - volver a llamar al modelo para regenerar el resumen,
+  - guardar cambios sobre la sesion existente.
+- API interna para historiales:
+  - `GET /api/patients`
+  - `GET /api/patients/<patient_id>`
+  - `GET /api/patients/<patient_id>/sessions/<session_id>`
+  - `POST /api/sessions/resummarize`
+  - `PUT /api/patients/<patient_id>/sessions/<session_id>`
+- Pruebas automatizadas con `unittest` para:
+  - normalizacion,
+  - chunking,
+  - parseo JSON,
+  - persistencia,
+  - resumen,
+  - endpoints de historiales y edicion.
 
-### En progreso funcional
+### Limitaciones actuales
 
-- La app ya cubre el flujo base de transcripcion y resumen local.
-- El historial se guarda por identificador manual del paciente y nombre normalizado.
-- La memoria historica se persiste, pero todavia no se reutiliza como contexto en consultas futuras.
+- El historial previo se guarda, pero todavia no se reutiliza como contexto en nuevas consultas.
+- No hay autenticacion, cifrado ni control de acceso.
+- Los historiales se guardan en JSON local, sin base de datos ni versionado de esquema.
+- La interfaz esta pensada para uso local y todavia no esta empaquetada como aplicacion de escritorio.
 
-## Decisiones tecnicas actuales
+## Flujo actual de la aplicacion
 
-- Whisper se usa para speech-to-text local.
-- Ollama se usa para ejecutar LLMs open source de manera local.
-- Modelo por defecto actual para resumen: `llama3.2:3b`.
-- El resumen se exige en JSON estricto para simplificar el parseo y la persistencia.
-- La estructura de pacientes se basa en:
-  - un identificador manual explicito,
-  - nombre original,
-  - nombre normalizado,
-  - lista de sesiones.
+1. El usuario abre la pagina principal.
+2. Introduce los datos del paciente.
+3. Graba audio y obtiene una transcripcion local con Whisper.
+4. Revisa la transcripcion y la envia a Ollama.
+5. Se genera un resumen estructurado y se guarda en `data/patients/`.
+6. Desde la pagina de historiales puede reabrir esa sesion, editarla, regenerar el resumen y guardar cambios.
 
 ## Estructura real del repositorio
 
 ```text
 /
-|-- app.py                    # Backend Flask
-|-- requirements.txt          # Dependencias Python
+|-- app.py
+|-- requirements.txt
 |-- template/
-|   `-- main.html             # Interfaz web local
+|   |-- main.html
+|   `-- history.html
 |-- src/
-|   |-- main.py               # CLI simple para Whisper
+|   |-- main.py
 |   |-- speech/
 |   |   |-- __init__.py
-|   |   `-- transcriber.py    # Grabacion y transcripcion local
+|   |   `-- transcriber.py
 |   `-- summarize/
 |       |-- __init__.py
-|       |-- models.py         # Contratos tipados
-|       |-- prompts.py        # Prompts para Ollama
-|       |-- service.py        # Pipeline de resumen
-|       `-- storage.py        # Persistencia local JSON
+|       |-- models.py
+|       |-- prompts.py
+|       |-- service.py
+|       `-- storage.py
 |-- data/
-|   `-- patients/             # Historial local por paciente
-|-- tests/                    # Pruebas automatizadas
+|   `-- patients/
+|-- tests/
+|   |-- test_app.py
+|   |-- test_summarize_service.py
+|   `-- test_summarize_storage.py
 `-- doc/
     `-- PROJECT.md
 ```
 
-## Que queda por hacer
+## Componentes principales
+
+### `app.py`
+
+- Sirve la interfaz principal y la vista de historiales.
+- Expone endpoints para transcripcion, resumen y gestion de historiales.
+
+### `src/speech/transcriber.py`
+
+- Encapsula la transcripcion local con Whisper.
+
+### `src/summarize/service.py`
+
+- Orquesta el pipeline de resumen con Ollama.
+- Permite tanto guardar una consulta nueva como regenerar un resumen sin persistirlo todavia.
+
+### `src/summarize/storage.py`
+
+- Gestiona los JSON de pacientes y sesiones.
+- Permite listar pacientes, leer sesiones y guardar modificaciones manuales.
+
+### `template/main.html`
+
+- Interfaz principal de nueva consulta.
+
+### `template/history.html`
+
+- Interfaz de navegacion y edicion de historiales.
+
+## Persistencia de datos
+
+Cada paciente se guarda en un JSON dentro de `data/patients/`.
+
+La estructura incluye:
+
+- metadatos del paciente,
+- fechas de creacion y actualizacion,
+- lista de sesiones,
+- transcripcion original o corregida,
+- resumen,
+- motivo de consulta,
+- puntos clave,
+- snapshot del contexto clinico asociado a esa sesion.
+
+## Tareas pendientes
 
 ### Producto
 
-- Mejorar la experiencia clinica de la interfaz web.
-- Mostrar historial previo de un paciente dentro de la app.
-- Permitir editar y volver a guardar un resumen ya generado.
-- Añadir exportacion a formatos utiles para consulta o entrega.
-
-### LLM y resumen
-
 - Reutilizar historiales previos como contexto resumido en nuevas sesiones.
-- Afinar prompts para consultas largas o conversaciones poco estructuradas.
-- Evaluar modelos locales alternativos y comparar calidad frente a coste.
-- Añadir validaciones adicionales para evitar respuestas incompletas o ambiguas.
+- Mejorar aun mas la experiencia de navegacion y revision clinica.
+- Anadir exportacion a formatos utiles como PDF, DOCX o informe clinico estructurado.
 
-### Persistencia y datos
+### Datos y seguridad
 
-- Endurecer la capa de almacenamiento local.
-- Definir politica de backup, cifrado o control de acceso si el proyecto evoluciona.
-- Incorporar versionado de esquema para futuros cambios en los JSON.
+- Definir politica de backup local.
+- Valorar cifrado de historiales.
+- Introducir control de acceso si la app evoluciona mas alla del uso individual local.
+- Estudiar versionado de esquema para los JSON.
 
-### Interfaz y despliegue
+### Despliegue
 
-- Decidir si la version final sera:
-  - app web local servida por Flask,
-  - aplicacion de escritorio empaquetada,
-  - o una combinacion de ambas.
-- Mejorar el layout responsive y la presentacion visual.
-- Separar mejor frontend y backend si el alcance crece.
+- Decidir si la entrega final sera web local, escritorio empaquetado, o ambas.
+- Preparar una distribucion mas sencilla para usuarios no tecnicos.
 
 ### Entrega academica
 
-- Limpiar y revisar el repositorio final para GitHub.
-- Preparar la presentacion en PowerPoint.
-- Redactar la memoria o texto de presentacion del proyecto.
+- Revisar README y documentacion final.
+- Preparar presentacion y memoria del proyecto.
 
-## Notas importantes
+## Nota importante
 
-- El proyecto prioriza procesamiento local y privacidad.
-- Los datos clinicos guardados en `data/patients/` no deben versionarse.
-- El flujo actual sirve como base funcional para una futura app de escritorio o una web local mas pulida.
+El proyecto prioriza privacidad y procesamiento local. Los datos clinicos guardados en `data/patients/` no deberian versionarse ni compartirse fuera del entorno controlado de trabajo.

@@ -64,6 +64,37 @@
       text-align: right;
     }
 
+    .topbar {
+      display: grid;
+      gap: 12px;
+      justify-items: end;
+    }
+
+    .page-links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .page-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.85);
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .page-link.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
     .status.error {
       color: var(--danger);
     }
@@ -274,7 +305,13 @@
           Transcribe conversaciones clinicas con Whisper y genera un resumen estructurado local con Ollama.
         </p>
       </div>
-      <div id="status" class="status" aria-live="polite"></div>
+      <div class="topbar">
+        <nav class="page-links" aria-label="Navegacion principal">
+          <a class="page-link active" href="/" aria-current="page">Nueva consulta</a>
+          <a class="page-link" href="/historiales">Historiales</a>
+        </nav>
+        <div id="status" class="status" aria-live="polite"></div>
+      </div>
     </header>
 
     <main>

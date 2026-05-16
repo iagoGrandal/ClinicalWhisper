@@ -35,17 +35,17 @@ class ClinicalSummarizer:
 
     def summarize_consultation(self, payload: dict[str, object]) -> dict[str, object]:
         """Summarize a consultation, persist it and return the public response."""
-        transcript = normalize_free_text(str(payload.get("transcript", "")))
-        if not transcript:
-            raise ValueError("La transcripcion no puede estar vacia.")
-
-        patient_context = build_patient_context(payload)
-        model = normalize_free_text(str(payload.get("model", ""))) or self.default_model
-        chunk_summaries = self._summarize_chunks(transcript, patient_context, model)
-        summary_result = self._build_final_summary(chunk_summaries, patient_context, model)
+        patient_context, transcript, summary_result = self.generate_summary_result(payload)
         self.store.save_summary(patient_context, transcript, summary_result)
         response = summary_result.to_dict()
         response["saved"] = True
+        return response
+
+    def preview_summary(self, payload: dict[str, object]) -> dict[str, object]:
+        """Summarize a consultation without persisting the result."""
+        _, _, summary_result = self.generate_summary_result(payload)
+        response = summary_result.to_dict()
+        response["saved"] = False
         return response
 
     def list_models(self) -> list[str]:
@@ -60,6 +60,21 @@ class ClinicalSummarizer:
             ordered.extend(model for model in models if model != self.default_model)
             return ordered
         return models
+
+    def generate_summary_result(
+        self,
+        payload: dict[str, object],
+    ) -> tuple[PatientContext, str, SummaryResult]:
+        """Build a structured summary result from the raw consultation payload."""
+        transcript = normalize_free_text(str(payload.get("transcript", "")))
+        if not transcript:
+            raise ValueError("La transcripcion no puede estar vacia.")
+
+        patient_context = build_patient_context(payload)
+        model = normalize_free_text(str(payload.get("model", ""))) or self.default_model
+        chunk_summaries = self._summarize_chunks(transcript, patient_context, model)
+        summary_result = self._build_final_summary(chunk_summaries, patient_context, model)
+        return patient_context, transcript, summary_result
 
     def _summarize_chunks(
         self,

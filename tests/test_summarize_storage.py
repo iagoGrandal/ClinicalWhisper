@@ -79,3 +79,47 @@ class JsonPatientStoreTests(unittest.TestCase):
 
         self.assertEqual(len(record.sessions), 2)
         self.assertEqual(record.sessions[-1].session_id, "s2")
+
+    def test_list_patients_returns_summary_metadata(self) -> None:
+        """The patient list should expose lightweight data for the histories view."""
+        result = SummaryResult("uno", "motivo", ["clave"], "llama3.2:3b", "paciente-001", "s1")
+        self.store.save_summary(self.patient_context, "texto 1", result)
+
+        patients = self.store.list_patients()
+
+        self.assertEqual(len(patients), 1)
+        self.assertEqual(patients[0]["patient_id"], "paciente-001")
+        self.assertEqual(patients[0]["session_count"], 1)
+        self.assertTrue(patients[0]["last_session_at"])
+
+    def test_update_session_persists_manual_edits(self) -> None:
+        """Manual edits should update the stored transcript, summary and keypoints."""
+        result = SummaryResult("uno", "motivo", ["clave"], "llama3.2:3b", "paciente-001", "s1")
+        self.store.save_summary(self.patient_context, "texto original", result)
+
+        edited_context = PatientContext(
+            patient_id="paciente-001",
+            patient_name="Ana Perez Actualizada",
+            patient_name_normalized="ana perez actualizada",
+            patient_identifier_raw="Paciente 001",
+            visit_reason="motivo revisado",
+        )
+        session = self.store.update_session(
+            patient_id="paciente-001",
+            session_id="s1",
+            patient_context=edited_context,
+            transcript="texto corregido",
+            summary="resumen corregido",
+            visit_reason="motivo revisado",
+            keypoints=["uno", "dos"],
+            model="llama3.2:3b",
+        )
+
+        self.assertEqual(session.transcript, "texto corregido")
+        self.assertEqual(session.summary, "resumen corregido")
+        self.assertEqual(session.keypoints, ["uno", "dos"])
+
+        record = self.store.get_patient_record("paciente-001")
+        assert record is not None
+        self.assertEqual(record.patient_name, "Ana Perez Actualizada")
+        self.assertEqual(record.sessions[0].updated_at, session.updated_at)

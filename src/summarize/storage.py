@@ -87,6 +87,7 @@ class JsonPatientStore:
         session = SessionRecord(
             session_id=summary_result.session_id,
             created_at=timestamp,
+            updated_at=timestamp,
             transcript=transcript,
             summary=summary_result.summary,
             visit_reason=summary_result.visit_reason,
@@ -97,6 +98,104 @@ class JsonPatientStore:
         updated = replace(record, updated_at=timestamp, sessions=[*record.sessions, session])
         self._write_patient_record(updated)
         return updated
+
+    def list_patients(self) -> list[dict[str, object]]:
+        """Return lightweight metadata for each stored patient record."""
+        patients: list[dict[str, object]] = []
+        for path in self.base_path.glob("*.json"):
+            patient_id = path.stem
+            record = self._load_patient_record(patient_id)
+            if record is None:
+                continue
+
+            last_session_at = ""
+            if record.sessions:
+                last_session = max(
+                    record.sessions,
+                    key=lambda session: session.updated_at or session.created_at,
+                )
+                last_session_at = last_session.updated_at or last_session.created_at
+
+            patients.append(
+                {
+                    "patient_id": record.patient_id,
+                    "patient_name": record.patient_name,
+                    "patient_identifier_raw": record.patient_identifier_raw,
+                    "session_count": len(record.sessions),
+                    "created_at": record.created_at,
+                    "updated_at": record.updated_at,
+                    "last_session_at": last_session_at,
+                }
+            )
+
+        patients.sort(key=lambda item: (str(item["patient_name"]).casefold(), str(item["patient_id"])))
+        return patients
+
+    def get_patient_record(self, patient_id: str) -> PatientRecord | None:
+        """Return one stored patient record by identifier when present."""
+        return self._load_patient_record(normalize_patient_identifier(patient_id))
+
+    def get_session_record(self, patient_id: str, session_id: str) -> SessionRecord | None:
+        """Return one stored session for the selected patient when present."""
+        record = self.get_patient_record(patient_id)
+        if record is None:
+            return None
+
+        for session in record.sessions:
+            if session.session_id == session_id:
+                return session
+        return None
+
+    def update_session(
+        self,
+        patient_id: str,
+        session_id: str,
+        patient_context: PatientContext,
+        transcript: str,
+        summary: str,
+        visit_reason: str,
+        keypoints: list[str],
+        model: str,
+    ) -> SessionRecord:
+        """Persist manual edits to one existing consultation session."""
+        record = self.get_patient_record(patient_id)
+        if record is None:
+            raise KeyError(f"No existe el paciente '{patient_id}'.")
+
+        timestamp = current_timestamp()
+        updated_session: SessionRecord | None = None
+        sessions: list[SessionRecord] = []
+
+        for session in record.sessions:
+            if session.session_id != session_id:
+                sessions.append(session)
+                continue
+
+            updated_session = replace(
+                session,
+                updated_at=timestamp,
+                transcript=transcript,
+                summary=summary,
+                visit_reason=visit_reason,
+                keypoints=keypoints,
+                model=model,
+                patient_context=patient_context.to_storage_dict(),
+            )
+            sessions.append(updated_session)
+
+        if updated_session is None:
+            raise KeyError(f"No existe la sesion '{session_id}' para el paciente '{patient_id}'.")
+
+        updated_record = replace(
+            record,
+            patient_name=patient_context.patient_name,
+            patient_name_normalized=patient_context.patient_name_normalized,
+            patient_identifier_raw=patient_context.patient_identifier_raw,
+            updated_at=timestamp,
+            sessions=sessions,
+        )
+        self._write_patient_record(updated_record)
+        return updated_session
 
     def _create_patient_record(self, patient_context: PatientContext, timestamp: str) -> PatientRecord:
         """Build a new patient record from the first known consultation."""
@@ -118,7 +217,7 @@ class JsonPatientStore:
         with path.open("r", encoding="utf-8") as file_handle:
             data = json.load(file_handle)
 
-        sessions = [SessionRecord(**session) for session in data.get("sessions", [])]
+        sessions = [self._session_from_dict(session) for session in data.get("sessions", [])]
         return PatientRecord(
             patient_id=data["patient_id"],
             patient_name=data["patient_name"],
@@ -138,6 +237,20 @@ class JsonPatientStore:
     def _patient_path(self, patient_id: str) -> Path:
         """Return the JSON path assigned to the provided patient identifier."""
         return self.base_path / f"{patient_id}.json"
+
+    def _session_from_dict(self, data: dict[str, object]) -> SessionRecord:
+        """Build a session model while tolerating older JSON payloads."""
+        return SessionRecord(
+            session_id=str(data["session_id"]),
+            created_at=str(data["created_at"]),
+            updated_at=str(data.get("updated_at", data["created_at"])),
+            transcript=str(data.get("transcript", "")),
+            summary=str(data.get("summary", "")),
+            visit_reason=str(data.get("visit_reason", "")),
+            keypoints=[str(item) for item in data.get("keypoints", [])],
+            model=str(data.get("model", "")),
+            patient_context={str(key): str(value) for key, value in dict(data.get("patient_context", {})).items()},
+        )
 
 
 def current_timestamp() -> str:
