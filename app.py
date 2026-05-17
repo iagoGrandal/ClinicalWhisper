@@ -167,7 +167,7 @@ def update_session(patient_id: str, session_id: str) -> tuple[object, int] | obj
     try:
         patient_context = build_patient_context(payload)
         if patient_context.patient_id != normalize_patient_identifier(patient_id):
-            raise ValueError("No se puede cambiar el identificador del paciente desde esta pantalla.")
+            raise ValueError("No se puede cambiar el DNI del paciente desde esta pantalla.")
 
         transcript = normalize_free_text(str(payload.get("transcript", "")))
         if not transcript:

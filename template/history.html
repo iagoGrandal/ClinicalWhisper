@@ -133,6 +133,8 @@
       gap: 16px;
       align-content: start;
       min-height: calc(100vh - 130px);
+      max-height: calc(100vh - 130px);
+      overflow: hidden;
     }
 
     .sidebar-title,
@@ -159,6 +161,17 @@
       display: grid;
       gap: 10px;
       align-content: start;
+      min-height: 0;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .patient-search {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 700;
     }
 
     .empty-list {
@@ -293,18 +306,19 @@
     }
 
     textarea {
-      min-height: 92px;
+      height: 92px;
       padding: 12px 14px;
-      resize: vertical;
+      resize: none;
+      overflow-y: auto;
       line-height: 1.45;
     }
 
     textarea.big-textarea {
-      min-height: 220px;
+      height: 180px;
     }
 
     textarea.output-textarea {
-      min-height: 140px;
+      height: 120px;
       background: #f9fcfc;
     }
 
@@ -371,6 +385,7 @@
       .sidebar,
       .editor {
         min-height: auto;
+        max-height: none;
       }
     }
 
@@ -420,8 +435,13 @@
         <div class="sidebar-title">
           <div class="eyebrow">Pacientes</div>
           <h2>Lista de pacientes</h2>
-          <div class="helper">Cada tarjeta muestra el identificador, el número de sesiones y la fecha de la última actualización.</div>
+          <div class="helper">Cada tarjeta muestra el DNI, el número de sesiones y la fecha de la última actualización.</div>
         </div>
+
+        <label class="patient-search">
+          Buscar por nombre
+          <input id="patientSearch" type="search" autocomplete="off" placeholder="Nombre del paciente">
+        </label>
 
         <div id="patientList" class="list"></div>
       </aside>
@@ -457,18 +477,13 @@
           <fieldset id="sessionFieldset" disabled>
             <div class="field-grid">
               <label>
-                Identificador del paciente
-                <input id="patientIdentifier" type="text" readonly>
-              </label>
-
-              <label>
                 Nombre completo
                 <input id="patientName" type="text" autocomplete="name">
               </label>
 
               <label>
                 DNI
-                <input id="patientDni" type="text" autocomplete="off">
+                <input id="patientDni" type="text" autocomplete="off" readonly required>
               </label>
 
               <label>
@@ -560,6 +575,7 @@
   <script>
     const statusText = document.getElementById("status");
     const patientList = document.getElementById("patientList");
+    const patientSearch = document.getElementById("patientSearch");
     const sessionList = document.getElementById("sessionList");
     const sessionPanelTitle = document.getElementById("sessionPanelTitle");
     const sessionPanelHelper = document.getElementById("sessionPanelHelper");
@@ -569,7 +585,6 @@
     const sessionFieldset = document.getElementById("sessionFieldset");
 
     const fields = {
-      patientIdentifier: document.getElementById("patientIdentifier"),
       patientName: document.getElementById("patientName"),
       patientDni: document.getElementById("patientDni"),
       patientSex: document.getElementById("patientSex"),
@@ -596,6 +611,7 @@
 
     regenerateButton.addEventListener("click", regenerateSummary);
     saveButton.addEventListener("click", saveSessionChanges);
+    patientSearch.addEventListener("input", renderPatientList);
 
     initialize();
 
@@ -783,24 +799,23 @@
     }
 
     function collectPayload() {
-      const patientIdentifier = fields.patientIdentifier.value.trim();
       const patientName = fields.patientName.value.trim();
+      const patientDni = fields.patientDni.value.trim();
       const transcript = fields.transcript.value.trim();
 
-      if (!patientIdentifier) {
-        throw new Error("La sesión cargada no tiene identificador de paciente.");
-      }
       if (!patientName) {
         throw new Error("El nombre del paciente es obligatorio.");
+      }
+      if (!patientDni) {
+        throw new Error("El DNI del paciente es obligatorio.");
       }
       if (!transcript) {
         throw new Error("La transcripción no puede estar vacía.");
       }
 
       return {
-        patientIdentifier,
         patientName,
-        patientDni: fields.patientDni.value,
+        patientDni,
         patientSex: fields.patientSex.value,
         patientPhone: fields.patientPhone.value,
         birthDate: fields.birthDate.value,
@@ -818,9 +833,8 @@
 
     function populateEditor(session) {
       const context = session.patient_context || {};
-      fields.patientIdentifier.value = context.patient_identifier_raw || session.patient_id || "";
       fields.patientName.value = context.patient_name || "";
-      fields.patientDni.value = context.patient_dni || "";
+      fields.patientDni.value = context.patient_dni || context.patient_identifier_raw || session.patient_id || "";
       fields.patientSex.value = context.patient_sex || "";
       fields.patientPhone.value = context.patient_phone || "";
       fields.birthDate.value = context.birth_date || "";
@@ -852,19 +866,29 @@
     }
 
     function renderPatientList() {
+      const searchTerm = normalizeSearch(patientSearch.value);
+      const visiblePatients = state.patients.filter((patient) =>
+        normalizeSearch(patient.patient_name || "").includes(searchTerm)
+      );
+
       if (!state.patients.length) {
         patientList.innerHTML = '<div class="empty-list">Todavía no hay pacientes guardados. Genera primero una consulta desde la pantalla principal.</div>';
         return;
       }
 
-      patientList.innerHTML = state.patients.map((patient) => `
+      if (!visiblePatients.length) {
+        patientList.innerHTML = '<div class="empty-list">No hay pacientes que coincidan con la búsqueda.</div>';
+        return;
+      }
+
+      patientList.innerHTML = visiblePatients.map((patient) => `
         <button
           type="button"
           class="list-card ${patient.patient_id === state.selectedPatientId ? "active" : ""}"
           data-patient-id="${escapeHtml(patient.patient_id)}"
         >
           <span class="card-title">${escapeHtml(patient.patient_name)}</span>
-          <span class="card-meta">${escapeHtml(patient.patient_identifier_raw || patient.patient_id)}</span>
+          <span class="card-meta">DNI: ${escapeHtml(patient.patient_identifier_raw || patient.patient_id)}</span>
           <span class="card-meta">${patient.session_count} sesión(es)</span>
           <span class="card-preview">Última actualización: ${escapeHtml(formatDate(patient.last_session_at || patient.updated_at))}</span>
         </button>
@@ -954,6 +978,14 @@
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#39;");
+    }
+
+    function normalizeSearch(value) {
+      return String(value)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase("es-ES")
+        .trim();
     }
 
     function readableError(error) {

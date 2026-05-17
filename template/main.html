@@ -175,24 +175,24 @@
     }
 
     textarea {
-      min-height: 130px;
+      height: 130px;
       padding: 14px;
-      resize: vertical;
+      resize: none;
+      overflow-y: auto;
       line-height: 1.45;
     }
 
     textarea.small-textarea {
-      min-height: 74px;
       height: 74px;
     }
 
     textarea.output-textarea {
-      min-height: 120px;
+      height: 120px;
       background: var(--soft);
     }
 
     textarea#transcript {
-      min-height: 260px;
+      height: 260px;
     }
 
     input:focus,
@@ -321,18 +321,13 @@
 
           <div class="field-grid">
             <label>
-              Identificador del paciente
-              <input id="patientIdentifier" name="patientIdentifier" type="text" autocomplete="off" placeholder="Ejemplo: HC-0001">
-            </label>
-
-            <label>
               Nombre completo
               <input id="patientName" name="patientName" type="text" autocomplete="name">
             </label>
 
             <label>
               DNI
-              <input id="patientDni" name="patientDni" type="text" autocomplete="off">
+              <input id="patientDni" name="patientDni" type="text" autocomplete="off" required>
             </label>
           </div>
 
@@ -473,7 +468,6 @@
     const timer = document.getElementById("timer");
 
     const patientFields = {
-      patientIdentifier: document.getElementById("patientIdentifier"),
       patientName: document.getElementById("patientName"),
       patientDni: document.getElementById("patientDni"),
       patientSex: document.getElementById("patientSex"),
@@ -647,18 +641,17 @@
     }
 
     function collectSummaryPayload() {
-      if (!patientFields.patientIdentifier.value.trim()) {
-        throw new Error("Introduce un identificador del paciente antes de resumir.");
-      }
       if (!patientFields.patientName.value.trim()) {
         throw new Error("Introduce el nombre del paciente antes de resumir.");
+      }
+      if (!patientFields.patientDni.value.trim()) {
+        throw new Error("Introduce el DNI del paciente antes de resumir.");
       }
       if (!transcript.value.trim()) {
         throw new Error("No hay transcripcion para resumir.");
       }
 
       return {
-        patientIdentifier: patientFields.patientIdentifier.value,
         patientName: patientFields.patientName.value,
         patientDni: patientFields.patientDni.value,
         patientSex: patientFields.patientSex.value,

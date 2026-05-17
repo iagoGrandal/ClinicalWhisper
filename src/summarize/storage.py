@@ -37,13 +37,16 @@ def normalize_patient_identifier(value: str) -> str:
 
 def build_patient_context(payload: dict[str, object]) -> PatientContext:
     """Validate raw request data and convert it into a typed patient context."""
-    raw_identifier = normalize_free_text(str(payload.get("patientIdentifier", "")))
+    patient_dni = normalize_free_text(str(payload.get("patientDni", "")))
+    raw_identifier = patient_dni
     patient_name = normalize_free_text(str(payload.get("patientName", "")))
     patient_id = normalize_patient_identifier(raw_identifier)
     patient_name_normalized = normalize_patient_name(patient_name)
 
+    if not patient_dni:
+        raise ValueError("Debes indicar el DNI del paciente.")
     if not patient_id:
-        raise ValueError("Debes indicar un identificador del paciente.")
+        raise ValueError("Debes indicar el DNI del paciente.")
     if not patient_name:
         raise ValueError("Debes indicar el nombre del paciente.")
 
@@ -52,7 +55,7 @@ def build_patient_context(payload: dict[str, object]) -> PatientContext:
         patient_name=patient_name,
         patient_name_normalized=patient_name_normalized,
         patient_identifier_raw=raw_identifier,
-        patient_dni=normalize_free_text(str(payload.get("patientDni", ""))),
+        patient_dni=patient_dni,
         patient_sex=normalize_free_text(str(payload.get("patientSex", ""))),
         patient_phone=normalize_free_text(str(payload.get("patientPhone", ""))),
         birth_date=normalize_free_text(str(payload.get("birthDate", ""))),

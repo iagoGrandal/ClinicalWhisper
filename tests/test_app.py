@@ -83,7 +83,6 @@ class SummarizeEndpointTests(unittest.TestCase):
         """Create one stored consultation that can be reused across API tests."""
         return self.summarizer.summarize_consultation(
             {
-                "patientIdentifier": "PAC-1",
                 "patientName": "Ana Perez",
                 "patientDni": "12345678A",
                 "visitDate": "2026-05-16",
@@ -95,8 +94,8 @@ class SummarizeEndpointTests(unittest.TestCase):
     def test_summarize_endpoint_returns_structured_payload(self) -> None:
         """A valid request should return structured summary JSON."""
         payload = {
-            "patientIdentifier": "PAC-1",
             "patientName": "Ana Perez",
+            "patientDni": "12345678A",
             "transcript": "Paciente con fiebre y tos desde ayer.",
             "model": "llama3.2:3b",
         }
@@ -113,8 +112,8 @@ class SummarizeEndpointTests(unittest.TestCase):
     def test_summarize_endpoint_rejects_missing_patient_name(self) -> None:
         """Missing required patient fields should return a 400 response."""
         payload = {
-            "patientIdentifier": "PAC-1",
             "patientName": "",
+            "patientDni": "12345678A",
             "transcript": "Paciente con fiebre y tos desde ayer.",
             "model": "llama3.2:3b",
         }
@@ -126,14 +125,30 @@ class SummarizeEndpointTests(unittest.TestCase):
         data = response.get_json()
         self.assertIn("nombre del paciente", data["error"])
 
+    def test_summarize_endpoint_rejects_missing_patient_dni(self) -> None:
+        """DNI is required because it is used as the patient identifier."""
+        payload = {
+            "patientName": "Ana Perez",
+            "patientDni": "",
+            "transcript": "Paciente con fiebre y tos desde ayer.",
+            "model": "llama3.2:3b",
+        }
+
+        with patch("app.get_summarizer", return_value=self.summarizer):
+            response = self.client.post("/summarize", json=payload)
+
+        self.assertEqual(response.status_code, 400)
+        data = response.get_json()
+        self.assertIn("DNI del paciente", data["error"])
+
     def test_patients_history_endpoints_return_saved_records(self) -> None:
         """Saved consultations should be exposed through the history APIs."""
         saved = self.seed_saved_session()
 
         with patch("app.get_summarizer", return_value=self.summarizer):
             patients_response = self.client.get("/api/patients")
-            patient_response = self.client.get("/api/patients/pac-1")
-            session_response = self.client.get(f"/api/patients/pac-1/sessions/{saved['session_id']}")
+            patient_response = self.client.get("/api/patients/12345678a")
+            session_response = self.client.get(f"/api/patients/12345678a/sessions/{saved['session_id']}")
 
         self.assertEqual(patients_response.status_code, 200)
         self.assertEqual(patient_response.status_code, 200)
@@ -144,7 +159,7 @@ class SummarizeEndpointTests(unittest.TestCase):
         self.assertEqual(patients[0]["patient_name"], "Ana Perez")
 
         patient = patient_response.get_json()["patient"]
-        self.assertEqual(patient["patient_identifier_raw"], "PAC-1")
+        self.assertEqual(patient["patient_identifier_raw"], "12345678A")
         self.assertEqual(len(patient["sessions"]), 1)
 
         session = session_response.get_json()["session"]
@@ -155,7 +170,6 @@ class SummarizeEndpointTests(unittest.TestCase):
         """The edit flow should support previewing a new summary and saving the final session."""
         saved = self.seed_saved_session()
         payload = {
-            "patientIdentifier": "PAC-1",
             "patientName": "Ana Perez Revisada",
             "patientDni": "12345678A",
             "visitDate": "2026-05-17",
@@ -169,7 +183,7 @@ class SummarizeEndpointTests(unittest.TestCase):
         with patch("app.get_summarizer", return_value=self.summarizer):
             preview_response = self.client.post("/api/sessions/resummarize", json=payload)
             save_response = self.client.put(
-                f"/api/patients/pac-1/sessions/{saved['session_id']}",
+                f"/api/patients/12345678a/sessions/{saved['session_id']}",
                 json=payload,
             )
 
