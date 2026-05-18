@@ -163,16 +163,6 @@ La estructura incluye:
 - Introducir control de acceso si la app evoluciona mas alla del uso individual local.
 - Estudiar versionado de esquema para los JSON.
 
-### Despliegue
-
-- Decidir si la entrega final sera web local, escritorio empaquetado, o ambas.
-- Preparar una distribucion mas sencilla para usuarios no tecnicos.
-
-### Entrega academica
-
-- Revisar README y documentacion final.
-- Preparar presentacion y memoria del proyecto.
-
 ## Nota importante
 
 El proyecto prioriza privacidad y procesamiento local. Los datos clinicos guardados en `data/patients/` no deberian versionarse ni compartirse fuera del entorno controlado de trabajo.

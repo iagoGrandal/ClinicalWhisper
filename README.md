@@ -135,7 +135,6 @@ Este repositorio debe entregarse con todos los miembros del grupo como colaborad
 
 ### Enlaces de entrega
 
-- Repositorio GitHub: `PENDIENTE`
 - Aplicacion web: `NO APLICA`
 - DOI Zenodo: `PENDIENTE`
-- Presentacion del examen: `PENDIENTE`
+- [Presentación del examen](https://udcgal-my.sharepoint.com/:p:/g/personal/i_gdelrio_udc_es/IQDMMytfs311QL8TuONZaE32AagcTE46QsmTb_ZFKh67-XM?e=v5eYHx)
