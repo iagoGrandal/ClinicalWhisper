@@ -38,6 +38,8 @@ Construir una herramienta 100% local que permita:
   - listar pacientes guardados,
   - listar sesiones de cada paciente,
   - abrir una sesion concreta,
+  - lanzar una nueva consulta para un paciente ya existente con datos precargados,
+  - borrar un paciente y todas sus sesiones,
   - editar transcripcion y datos clinicos,
   - volver a llamar al modelo para regenerar el resumen,
   - guardar cambios sobre la sesion existente.
@@ -47,6 +49,7 @@ Construir una herramienta 100% local que permita:
   - `GET /api/patients/<patient_id>/sessions/<session_id>`
   - `POST /api/sessions/resummarize`
   - `PUT /api/patients/<patient_id>/sessions/<session_id>`
+  - `DELETE /api/patients/<patient_id>`
 - Pruebas automatizadas con `unittest` para:
   - normalizacion,
   - chunking,
@@ -57,7 +60,7 @@ Construir una herramienta 100% local que permita:
 
 ### Limitaciones actuales
 
-- El historial previo se guarda, pero todavia no se reutiliza como contexto en nuevas consultas.
+- El historial previo ya se reutiliza para precargar datos del paciente en nuevas consultas, pero todavia no se incorpora como contexto longitudinal dentro del prompt del modelo.
 - No hay autenticacion, cifrado ni control de acceso.
 - Los historiales se guardan en JSON local, sin base de datos ni versionado de esquema.
 - La interfaz esta pensada para uso local y todavia no esta empaquetada como aplicacion de escritorio.
@@ -69,7 +72,7 @@ Construir una herramienta 100% local que permita:
 3. Graba audio y obtiene una transcripcion local con Whisper.
 4. Revisa la transcripcion y la envia a Ollama.
 5. Se genera un resumen estructurado y se guarda en `data/patients/`.
-6. Desde la pagina de historiales puede reabrir esa sesion, editarla, regenerar el resumen y guardar cambios.
+6. Desde la pagina de historiales puede reabrir esa sesion, editarla, regenerar el resumen, borrar pacientes o lanzar una nueva consulta con sus datos ya cargados.
 
 ## Estructura real del repositorio
 
@@ -149,7 +152,7 @@ La estructura incluye:
 
 ### Producto
 
-- Reutilizar historiales previos como contexto resumido en nuevas sesiones.
+- Reutilizar historiales previos como contexto resumido real dentro de nuevas sesiones, no solo como precarga del formulario.
 - Mejorar aun mas la experiencia de navegacion y revision clinica.
 - Anadir exportacion a formatos utiles como PDF, DOCX o informe clinico estructurado.
 

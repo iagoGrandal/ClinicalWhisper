@@ -200,6 +200,17 @@ class JsonPatientStore:
         self._write_patient_record(updated_record)
         return updated_session
 
+    def delete_patient(self, patient_id: str) -> PatientRecord:
+        """Delete one stored patient record and return the removed payload."""
+        normalized_patient_id = normalize_patient_identifier(patient_id)
+        record = self._load_patient_record(normalized_patient_id)
+        if record is None:
+            raise KeyError(f"No existe el paciente '{patient_id}'.")
+
+        path = self._patient_path(normalized_patient_id)
+        path.unlink(missing_ok=False)
+        return record
+
     def _create_patient_record(self, patient_context: PatientContext, timestamp: str) -> PatientRecord:
         """Build a new patient record from the first known consultation."""
         return PatientRecord(

@@ -160,6 +160,8 @@ class SummarizeEndpointTests(unittest.TestCase):
 
         patient = patient_response.get_json()["patient"]
         self.assertEqual(patient["patient_identifier_raw"], "12345678A")
+        self.assertEqual(patient["prefill"]["patientName"], "Ana Perez")
+        self.assertEqual(patient["prefill"]["patientDni"], "12345678A")
         self.assertEqual(len(patient["sessions"]), 1)
 
         session = session_response.get_json()["session"]
@@ -197,3 +199,22 @@ class SummarizeEndpointTests(unittest.TestCase):
         self.assertEqual(saved_session["transcript"], payload["transcript"])
         self.assertEqual(saved_session["patient_context"]["patient_name"], "Ana Perez Revisada")
         self.assertEqual(saved_session["patient_context"]["visit_date"], "2026-05-17")
+
+    def test_delete_patient_endpoint_removes_record(self) -> None:
+        """Deleting a patient should remove every stored session from the API."""
+        self.seed_saved_session()
+
+        with patch("app.get_summarizer", return_value=self.summarizer):
+            delete_response = self.client.delete("/api/patients/12345678a")
+            patients_response = self.client.get("/api/patients")
+            patient_response = self.client.get("/api/patients/12345678a")
+
+        self.assertEqual(delete_response.status_code, 200)
+        deleted = delete_response.get_json()
+        self.assertTrue(deleted["deleted"])
+        self.assertEqual(deleted["session_count"], 1)
+
+        self.assertEqual(patients_response.status_code, 200)
+        self.assertEqual(patients_response.get_json()["patients"], [])
+
+        self.assertEqual(patient_response.status_code, 404)

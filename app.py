@@ -127,6 +127,7 @@ def patient_detail(patient_id: str) -> tuple[object, int] | object:
                 "patient_identifier_raw": record.patient_identifier_raw,
                 "created_at": record.created_at,
                 "updated_at": record.updated_at,
+                "prefill": serialize_patient_prefill(record),
                 "sessions": [serialize_session_summary(session) for session in sessions],
             }
         }
@@ -197,6 +198,26 @@ def update_session(patient_id: str, session_id: str) -> tuple[object, int] | obj
     return jsonify({"session": serialize_session_detail(patient_context.patient_id, session), "saved": True})
 
 
+@app.delete("/api/patients/<patient_id>")
+def delete_patient(patient_id: str) -> tuple[object, int] | object:
+    """Delete one patient and every stored consultation session."""
+    try:
+        deleted_record = get_patient_store().delete_patient(patient_id)
+    except KeyError as exc:
+        return jsonify({"error": str(exc.args[0])}), 404
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify(
+        {
+            "deleted": True,
+            "patient_id": deleted_record.patient_id,
+            "patient_name": deleted_record.patient_name,
+            "session_count": len(deleted_record.sessions),
+        }
+    )
+
+
 def serialize_session_summary(session) -> dict[str, object]:
     """Return condensed session data for the histories sidebar."""
     context = session.patient_context or {}
@@ -208,6 +229,28 @@ def serialize_session_summary(session) -> dict[str, object]:
         "visit_date": visit_date,
         "visit_reason": session.visit_reason,
         "summary_preview": session.summary[:180],
+    }
+
+
+def serialize_patient_prefill(record) -> dict[str, str]:
+    """Return reusable patient fields copied into a brand-new consultation."""
+    latest_context = {}
+    if record.sessions:
+        latest_session = max(
+            record.sessions,
+            key=lambda session: session.updated_at or session.created_at,
+        )
+        latest_context = latest_session.patient_context or {}
+
+    return {
+        "patientName": latest_context.get("patient_name", record.patient_name),
+        "patientDni": latest_context.get("patient_dni", record.patient_identifier_raw),
+        "patientSex": latest_context.get("patient_sex", ""),
+        "patientPhone": latest_context.get("patient_phone", ""),
+        "birthDate": latest_context.get("birth_date", ""),
+        "medicalHistory": latest_context.get("medical_history", ""),
+        "currentMedication": latest_context.get("current_medication", ""),
+        "allergies": latest_context.get("allergies", ""),
     }
 
 

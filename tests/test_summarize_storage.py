@@ -123,3 +123,14 @@ class JsonPatientStoreTests(unittest.TestCase):
         assert record is not None
         self.assertEqual(record.patient_name, "Ana Perez Actualizada")
         self.assertEqual(record.sessions[0].updated_at, session.updated_at)
+
+    def test_delete_patient_removes_json_file(self) -> None:
+        """Deleting a patient should remove the persisted JSON record."""
+        result = SummaryResult("uno", "motivo", ["clave"], "llama3.2:3b", "paciente-001", "s1")
+        self.store.save_summary(self.patient_context, "texto original", result)
+
+        deleted = self.store.delete_patient("paciente-001")
+
+        self.assertEqual(deleted.patient_id, "paciente-001")
+        self.assertIsNone(self.store.get_patient_record("paciente-001"))
+        self.assertFalse((Path(self.temp_dir.name) / "paciente-001.json").exists())

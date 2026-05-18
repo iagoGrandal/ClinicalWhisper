@@ -254,6 +254,15 @@
       font-size: 0.92rem;
     }
 
+    .prefill-note {
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: var(--soft);
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.92rem;
+    }
+
     .workspace {
       min-height: calc(100vh - 120px);
     }
@@ -318,6 +327,10 @@
       <div class="left-column">
         <section class="patient-form" aria-label="Datos del paciente">
           <h2>Datos del paciente</h2>
+
+          <div id="prefillNote" class="prefill-note" hidden>
+            Se han cargado automaticamente los datos del paciente seleccionado desde Historiales.
+          </div>
 
           <div class="field-grid">
             <label>
@@ -466,6 +479,7 @@
     const visitReasonPreview = document.getElementById("visitReasonPreview");
     const statusText = document.getElementById("status");
     const timer = document.getElementById("timer");
+    const prefillNote = document.getElementById("prefillNote");
 
     const patientFields = {
       patientName: document.getElementById("patientName"),
@@ -497,6 +511,7 @@
     sendModelButton.addEventListener("click", summarizeTranscript);
 
     initializeVisitDate();
+    loadPatientPrefillFromQuery();
 
     async function startRecording() {
       setRecordingStatus(true, "Solicitando microfono...");
@@ -638,6 +653,45 @@
       if (!patientFields.visitDate.value) {
         patientFields.visitDate.value = new Date().toISOString().slice(0, 10);
       }
+    }
+
+    async function loadPatientPrefillFromQuery() {
+      const params = new URLSearchParams(window.location.search);
+      const selectedPatientId = params.get("patient");
+      if (!selectedPatientId) {
+        return;
+      }
+
+      setReady("Cargando datos del paciente seleccionado...");
+
+      try {
+        const response = await fetch(`/api/patients/${encodeURIComponent(selectedPatientId)}`);
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "No se pudieron cargar los datos del paciente.");
+        }
+
+        applyPatientPrefill(data.patient?.prefill || {});
+        prefillNote.hidden = false;
+        initializeVisitDate();
+        setReady("Datos del paciente cargados para una nueva consulta.");
+      } catch (error) {
+        prefillNote.hidden = true;
+        setError(readableError(error));
+      }
+    }
+
+    function applyPatientPrefill(prefill) {
+      patientFields.patientName.value = prefill.patientName || "";
+      patientFields.patientDni.value = prefill.patientDni || "";
+      patientFields.patientSex.value = prefill.patientSex || "";
+      patientFields.patientPhone.value = prefill.patientPhone || "";
+      patientFields.birthDate.value = prefill.birthDate || "";
+      patientFields.medicalHistory.value = prefill.medicalHistory || "";
+      patientFields.currentMedication.value = prefill.currentMedication || "";
+      patientFields.allergies.value = prefill.allergies || "";
+      patientFields.visitReason.value = "";
+      visitReasonPreview.value = "";
     }
 
     function collectSummaryPayload() {
