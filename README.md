@@ -136,5 +136,5 @@ Este repositorio debe entregarse con todos los miembros del grupo como colaborad
 ### Enlaces de entrega
 
 - Aplicacion web: `NO APLICA`
-- DOI Zenodo: `PENDIENTE`
+- [DOI Zenodo](https://zenodo.org/records/20276215?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6IjlhMWZkMDVkLTZhYzEtNDllYS04MThkLWJmNWI0OTA1NWYyYSIsImRhdGEiOnt9LCJyYW5kb20iOiJlYWQzOTVhNDg4MzY2NDlmNTc3MTU0NzI1OTMzZTgyNSJ9.OoONhdPq7rJvOP7qRaj6yp63oceFIomswD2GNsgaZWRRHFAycw0fB5ibgBH--Iz8YOd2shgqy3cPSFqN36ep4Q)
 - [Presentación del examen](https://udcgal-my.sharepoint.com/:p:/g/personal/i_gdelrio_udc_es/IQDMMytfs311QL8TuONZaE32AagcTE46QsmTb_ZFKh67-XM?e=v5eYHx)
