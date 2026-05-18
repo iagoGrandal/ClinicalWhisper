@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClinicalWhisper</title>
+  <style>
+    :root {
+      --bg: #f5fbff;
+      --panel: #ffffff;
+      --text: #1b1f24;
+      --muted: #667085;
+      --line: #d8dde5;
+      --accent: #126b5a;
+      --accent-dark: #0d5245;
+      --danger: #b42318;
+      --focus: #7a5cfa;
+      --soft: #eef7f5;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top right, rgba(18, 107, 90, 0.08), transparent 30%),
+        linear-gradient(180deg, #f7fcff 0%, #eef6fb 100%);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .app {
+      width: min(1240px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 24px 0;
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 2.35rem;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      max-width: 54ch;
+    }
+
+    .status {
+      min-height: 24px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      text-align: right;
+    }
+
+    .topbar {
+      display: grid;
+      gap: 12px;
+      justify-items: end;
+    }
+
+    .page-links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .page-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.85);
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .page-link.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(380px, 1fr) minmax(420px, 1.15fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .patient-form,
+    .recording-controls,
+    .workspace {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
+    }
+
+    .left-column,
+    .patient-form,
+    .recording-controls,
+    .workspace {
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .patient-form h2,
+    .recording-controls h2,
+    .workspace h2 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field-grid.compact {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    label,
+    .result-card {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      font: inherit;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--text);
+    }
+
+    input,
+    select {
+      height: 44px;
+      padding: 0 12px;
+    }
+
+    textarea {
+      height: 130px;
+      padding: 14px;
+      resize: none;
+      overflow-y: auto;
+      line-height: 1.45;
+    }
+
+    textarea.small-textarea {
+      height: 74px;
+    }
+
+    textarea.output-textarea {
+      height: 120px;
+      background: var(--soft);
+    }
+
+    textarea#transcript {
+      height: 260px;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus,
+    button:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--focus) 24%, transparent);
+      border-color: var(--focus);
+    }
+
+    .record-row,
+    .button-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      min-height: 48px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 20px;
+      background: var(--accent);
+      color: #ffffff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button:hover {
+      background: var(--accent-dark);
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.7;
+    }
+
+    .stop-button {
+      background: #b42318;
+    }
+
+    .stop-button:hover {
+      background: #8f1b13;
+    }
+
+    .secondary-button {
+      width: 100%;
+      background: #344054;
+    }
+
+    .secondary-button:hover {
+      background: #1f2937;
+    }
+
+    .timer,
+    .storage-note {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .prefill-note {
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: var(--soft);
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.92rem;
+    }
+
+    .workspace {
+      min-height: calc(100vh - 120px);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .summary-grid .full-span {
+      grid-column: 1 / -1;
+    }
+
+    @media (max-width: 980px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .workspace {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 820px) {
+      header {
+        display: grid;
+        align-items: start;
+      }
+
+      .status {
+        text-align: left;
+      }
+
+      .field-grid,
+      .field-grid.compact,
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>ClinicalWhisper</h1>
+        <p class="subtitle">
+          Transcribe conversaciones clinicas con Whisper y genera un resumen estructurado local con Ollama.
+        </p>
+      </div>
+      <div class="topbar">
+        <nav class="page-links" aria-label="Navegacion principal">
+          <a class="page-link active" href="/" aria-current="page">Nueva consulta</a>
+          <a class="page-link" href="/historiales">Historiales</a>
+        </nav>
+        <div id="status" class="status" aria-live="polite"></div>
+      </div>
+    </header>
+
+    <main>
+      <div class="left-column">
+        <section class="patient-form" aria-label="Datos del paciente">
+          <h2>Datos del paciente</h2>
+
+          <div id="prefillNote" class="prefill-note" hidden>
+            Se han cargado automaticamente los datos del paciente seleccionado desde Historiales.
+          </div>
+
+          <div class="field-grid">
+            <label>
+              Nombre completo
+              <input id="patientName" name="patientName" type="text" autocomplete="name">
+            </label>
+
+            <label>
+              DNI
+              <input id="patientDni" name="patientDni" type="text" autocomplete="off" required>
+            </label>
+          </div>
+
+          <div class="field-grid compact">
+            <label>
+              Sexo
+              <select id="patientSex" name="patientSex">
+                <option value="">Sin especificar</option>
+                <option value="mujer">Mujer</option>
+                <option value="hombre">Hombre</option>
+                <option value="otro">Otro</option>
+              </select>
+            </label>
+
+            <label>
+              Telefono
+              <input id="patientPhone" name="patientPhone" type="tel" autocomplete="tel">
+            </label>
+
+            <label>
+              Fecha de nacimiento
+              <input id="birthDate" name="birthDate" type="date">
+            </label>
+
+            <label>
+              Fecha de consulta
+              <input id="visitDate" name="visitDate" type="date">
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label>
+              Antecedentes medicos
+              <textarea id="medicalHistory" class="small-textarea" name="medicalHistory"></textarea>
+            </label>
+
+            <label>
+              Medicacion actual
+              <textarea id="currentMedication" class="small-textarea" name="currentMedication"></textarea>
+            </label>
+
+            <label>
+              Alergias
+              <textarea id="allergies" class="small-textarea" name="allergies"></textarea>
+            </label>
+
+            <label>
+              Motivo de consulta
+              <textarea id="visitReason" class="small-textarea" name="visitReason"></textarea>
+            </label>
+          </div>
+        </section>
+
+        <section class="recording-controls" aria-label="Controles de grabacion">
+          <h2>Grabacion y modelos</h2>
+
+          <div class="field-grid">
+            <label>
+              Idioma
+              <select id="language">
+                <option value="es" selected>Espanol</option>
+                <option value="en">Ingles</option>
+                <option value="gl">Gallego</option>
+                <option value="fr">Frances</option>
+                <option value="de">Aleman</option>
+                <option value="">Autodetectar</option>
+              </select>
+            </label>
+
+            <label>
+              Modelo Ollama
+              <select id="ollamaModel">
+                {% for model in ollama_models %}
+                <option value="{{ model }}" {% if model == default_ollama_model %}selected{% endif %}>{{ model }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          </div>
+
+          <div class="record-row">
+            <button id="startButton" type="button">Start</button>
+            <button id="pauseButton" type="button" disabled>Pausa</button>
+            <button id="stopButton" class="stop-button" type="button" disabled>Stop</button>
+            <span id="timer" class="timer">00:00</span>
+          </div>
+
+          <div class="storage-note">
+            Las consultas resumidas se guardan localmente en <code>data/patients/</code>.
+          </div>
+        </section>
+      </div>
+
+      <section class="workspace" aria-label="Transcripcion y resumen">
+        <h2>Transcripcion y resumen clinico</h2>
+
+        <label>
+          Texto transcrito
+          <textarea id="transcript" placeholder="La transcripcion aparecera aqui y podras corregirla antes de resumirla."></textarea>
+        </label>
+
+        <div class="summary-grid">
+          <label class="result-card full-span">
+            Resumen de la conversacion
+            <textarea id="summaryOutput" class="output-textarea" placeholder="El resumen generado por Ollama aparecera aqui."></textarea>
+          </label>
+
+          <label class="result-card">
+            Puntos clave
+            <textarea id="keypointsOutput" class="output-textarea" placeholder="Un punto clave por linea."></textarea>
+          </label>
+
+          <label class="result-card">
+            Ultimo motivo detectado
+            <textarea id="visitReasonPreview" class="output-textarea" placeholder="El motivo extraido se copiara tambien al campo del formulario."></textarea>
+          </label>
+        </div>
+
+        <div class="button-row">
+          <button id="sendModelButton" class="secondary-button" type="button">Enviar al modelo</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const startButton = document.getElementById("startButton");
+    const pauseButton = document.getElementById("pauseButton");
+    const stopButton = document.getElementById("stopButton");
+    const sendModelButton = document.getElementById("sendModelButton");
+    const languageSelect = document.getElementById("language");
+    const ollamaModelSelect = document.getElementById("ollamaModel");
+    const transcript = document.getElementById("transcript");
+    const summaryOutput = document.getElementById("summaryOutput");
+    const keypointsOutput = document.getElementById("keypointsOutput");
+    const visitReason = document.getElementById("visitReason");
+    const visitReasonPreview = document.getElementById("visitReasonPreview");
+    const statusText = document.getElementById("status");
+    const timer = document.getElementById("timer");
+    const prefillNote = document.getElementById("prefillNote");
+
+    const patientFields = {
+      patientName: document.getElementById("patientName"),
+      patientDni: document.getElementById("patientDni"),
+      patientSex: document.getElementById("patientSex"),
+      patientPhone: document.getElementById("patientPhone"),
+      birthDate: document.getElementById("birthDate"),
+      visitDate: document.getElementById("visitDate"),
+      medicalHistory: document.getElementById("medicalHistory"),
+      currentMedication: document.getElementById("currentMedication"),
+      allergies: document.getElementById("allergies"),
+      visitReason: document.getElementById("visitReason")
+    };
+
+    let stream = null;
+    let audioContext = null;
+    let source = null;
+    let processor = null;
+    let chunks = [];
+    let recording = false;
+    let paused = false;
+    let startedAt = 0;
+    let elapsedBeforePause = 0;
+    let timerId = null;
+
+    startButton.addEventListener("click", startRecording);
+    pauseButton.addEventListener("click", togglePause);
+    stopButton.addEventListener("click", stopAndTranscribe);
+    sendModelButton.addEventListener("click", summarizeTranscript);
+
+    initializeVisitDate();
+    loadPatientPrefillFromQuery();
+
+    async function startRecording() {
+      setRecordingStatus(true, "Solicitando microfono...");
+
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Abre la app desde http://127.0.0.1:5000 en un navegador para usar el microfono.");
+        }
+
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        source = audioContext.createMediaStreamSource(stream);
+        processor = audioContext.createScriptProcessor(4096, 1, 1);
+        chunks = [];
+        recording = true;
+        paused = false;
+        elapsedBeforePause = 0;
+        startedAt = Date.now();
+
+        processor.onaudioprocess = (event) => {
+          if (recording && !paused) {
+            chunks.push(new Float32Array(event.inputBuffer.getChannelData(0)));
+          }
+        };
+
+        source.connect(processor);
+        processor.connect(audioContext.destination);
+
+        startButton.disabled = true;
+        pauseButton.disabled = false;
+        stopButton.disabled = false;
+        pauseButton.textContent = "Pausa";
+        setRecordingStatus(true, "Grabando...");
+        startTimer();
+      } catch (error) {
+        setError(readableError(error));
+        await resetRecordingState();
+      }
+    }
+
+    function togglePause() {
+      if (!recording) {
+        return;
+      }
+
+      if (paused) {
+        paused = false;
+        startedAt = Date.now();
+        pauseButton.textContent = "Pausa";
+        setReady("Grabando...");
+        return;
+      }
+
+      paused = true;
+      elapsedBeforePause += Date.now() - startedAt;
+      pauseButton.textContent = "Reanudar";
+      setReady("Grabacion en pausa.");
+    }
+
+    async function stopAndTranscribe() {
+      if (!recording) {
+        return;
+      }
+
+      if (!paused) {
+        elapsedBeforePause += Date.now() - startedAt;
+      }
+
+      recording = false;
+      startButton.disabled = true;
+      pauseButton.disabled = true;
+      stopButton.disabled = true;
+      clearInterval(timerId);
+
+      try {
+        setRecordingStatus(true, "Transcribiendo...");
+        const samples = mergeChunks(chunks);
+        if (samples.length === 0) {
+          throw new Error("No se capturo audio. Prueba a grabar de nuevo.");
+        }
+
+        const resampled = resample(samples, audioContext.sampleRate, 16000);
+        const wavBlob = encodeWav(resampled, 16000);
+        await closeAudioInput();
+
+        const formData = new FormData();
+        formData.append("audio", wavBlob, "recording.wav");
+        formData.append("language", languageSelect.value);
+        formData.append("model", "base");
+
+        const response = await fetch("/transcribe", {
+          method: "POST",
+          body: formData
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "No se pudo transcribir el audio.");
+        }
+
+        transcript.value = data.text || "";
+        setReady("Transcripcion lista.");
+      } catch (error) {
+        setError(readableError(error));
+      } finally {
+        await resetRecordingState();
+      }
+    }
+
+    async function summarizeTranscript() {
+      sendModelButton.disabled = true;
+      setReady("Generando resumen clinico...");
+
+      try {
+        const payload = collectSummaryPayload();
+        const response = await fetch("/summarize", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "No se pudo resumir la consulta.");
+        }
+
+        applySummaryResponse(data);
+        setReady(`Resumen guardado para ${data.patient_id}.`);
+      } catch (error) {
+        setError(readableError(error));
+      } finally {
+        sendModelButton.disabled = false;
+      }
+    }
+
+    function initializeVisitDate() {
+      if (!patientFields.visitDate.value) {
+        patientFields.visitDate.value = new Date().toISOString().slice(0, 10);
+      }
+    }
+
+    async function loadPatientPrefillFromQuery() {
+      const params = new URLSearchParams(window.location.search);
+      const selectedPatientId = params.get("patient");
+      if (!selectedPatientId) {
+        return;
+      }
+
+      setReady("Cargando datos del paciente seleccionado...");
+
+      try {
+        const response = await fetch(`/api/patients/${encodeURIComponent(selectedPatientId)}`);
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "No se pudieron cargar los datos del paciente.");
+        }
+
+        applyPatientPrefill(data.patient?.prefill || {});
+        prefillNote.hidden = false;
+        initializeVisitDate();
+        setReady("Datos del paciente cargados para una nueva consulta.");
+      } catch (error) {
+        prefillNote.hidden = true;
+        setError(readableError(error));
+      }
+    }
+
+    function applyPatientPrefill(prefill) {
+      patientFields.patientName.value = prefill.patientName || "";
+      patientFields.patientDni.value = prefill.patientDni || "";
+      patientFields.patientSex.value = prefill.patientSex || "";
+      patientFields.patientPhone.value = prefill.patientPhone || "";
+      patientFields.birthDate.value = prefill.birthDate || "";
+      patientFields.medicalHistory.value = prefill.medicalHistory || "";
+      patientFields.currentMedication.value = prefill.currentMedication || "";
+      patientFields.allergies.value = prefill.allergies || "";
+      patientFields.visitReason.value = "";
+      visitReasonPreview.value = "";
+    }
+
+    function collectSummaryPayload() {
+      if (!patientFields.patientName.value.trim()) {
+        throw new Error("Introduce el nombre del paciente antes de resumir.");
+      }
+      if (!patientFields.patientDni.value.trim()) {
+        throw new Error("Introduce el DNI del paciente antes de resumir.");
+      }
+      if (!transcript.value.trim()) {
+        throw new Error("No hay transcripcion para resumir.");
+      }
+
+      return {
+        patientName: patientFields.patientName.value,
+        patientDni: patientFields.patientDni.value,
+        patientSex: patientFields.patientSex.value,
+        patientPhone: patientFields.patientPhone.value,
+        birthDate: patientFields.birthDate.value,
+        visitDate: patientFields.visitDate.value,
+        medicalHistory: patientFields.medicalHistory.value,
+        currentMedication: patientFields.currentMedication.value,
+        allergies: patientFields.allergies.value,
+        visitReason: patientFields.visitReason.value,
+        transcript: transcript.value,
+        model: ollamaModelSelect.value
+      };
+    }
+
+    function applySummaryResponse(data) {
+      summaryOutput.value = data.summary || "";
+      visitReason.value = data.visit_reason || "";
+      visitReasonPreview.value = data.visit_reason || "";
+      keypointsOutput.value = formatKeypoints(data.keypoints || []);
+    }
+
+    function formatKeypoints(keypoints) {
+      return keypoints.map((item) => `- ${item}`).join("\n");
+    }
+
+    function readableError(error) {
+      if (error?.name === "NotAllowedError" || error?.name === "PermissionDeniedError") {
+        return "El navegador ha bloqueado el microfono. Permite Microfono y recarga la pagina.";
+      }
+      if (error?.name === "NotFoundError") {
+        return "No se encontro ningun microfono conectado.";
+      }
+      return error?.message || "Error inesperado.";
+    }
+
+    function setRecordingStatus(disabled, message) {
+      startButton.disabled = disabled;
+      statusText.classList.remove("error");
+      statusText.textContent = message;
+    }
+
+    function setReady(message) {
+      statusText.classList.remove("error");
+      statusText.textContent = message;
+    }
+
+    function setError(message) {
+      statusText.classList.add("error");
+      statusText.textContent = message;
+    }
+
+    function startTimer() {
+      updateTimerLabel(0);
+      clearInterval(timerId);
+      timerId = setInterval(() => {
+        const elapsed = elapsedBeforePause + (paused ? 0 : Date.now() - startedAt);
+        updateTimerLabel(Math.floor(elapsed / 1000));
+      }, 250);
+    }
+
+    function updateTimerLabel(seconds) {
+      const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
+      const rest = Math.floor(seconds % 60).toString().padStart(2, "0");
+      timer.textContent = `${minutes}:${rest}`;
+    }
+
+    async function closeAudioInput() {
+      if (source) {
+        try {
+          source.disconnect();
+        } catch (error) {
+        }
+      }
+      if (processor) {
+        try {
+          processor.disconnect();
+        } catch (error) {
+        }
+      }
+      if (audioContext && audioContext.state !== "closed") {
+        await audioContext.close();
+      }
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    }
+
+    async function resetRecordingState() {
+      recording = false;
+      paused = false;
+      clearInterval(timerId);
+      await closeAudioInput();
+      stream = null;
+      audioContext = null;
+      source = null;
+      processor = null;
+      chunks = [];
+      elapsedBeforePause = 0;
+      startedAt = 0;
+      startButton.disabled = false;
+      pauseButton.disabled = true;
+      stopButton.disabled = true;
+      pauseButton.textContent = "Pausa";
+    }
+
+    function mergeChunks(audioChunks) {
+      const totalLength = audioChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+      const merged = new Float32Array(totalLength);
+      let offset = 0;
+
+      for (const chunk of audioChunks) {
+        merged.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      return merged;
+    }
+
+    function resample(samples, fromRate, toRate) {
+      if (fromRate === toRate) {
+        return samples;
+      }
+
+      const ratio = fromRate / toRate;
+      const result = new Float32Array(Math.round(samples.length / ratio));
+
+      for (let i = 0; i < result.length; i += 1) {
+        const position = i * ratio;
+        const index = Math.floor(position);
+        const nextIndex = Math.min(index + 1, samples.length - 1);
+        const weight = position - index;
+        result[i] = samples[index] * (1 - weight) + samples[nextIndex] * weight;
+      }
+
+      return result;
+    }
+
+    function encodeWav(samples, sampleRate) {
+      const buffer = new ArrayBuffer(44 + samples.length * 2);
+      const view = new DataView(buffer);
+
+      writeString(view, 0, "RIFF");
+      view.setUint32(4, 36 + samples.length * 2, true);
+      writeString(view, 8, "WAVE");
+      writeString(view, 12, "fmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeString(view, 36, "data");
+      view.setUint32(40, samples.length * 2, true);
+
+      let offset = 44;
+      for (const sample of samples) {
+        const clipped = Math.max(-1, Math.min(1, sample));
+        view.setInt16(offset, clipped < 0 ? clipped * 0x8000 : clipped * 0x7fff, true);
+        offset += 2;
+      }
+
+      return new Blob([view], { type: "audio/wav" });
+    }
+
+    function writeString(view, offset, value) {
+      for (let index = 0; index < value.length; index += 1) {
+        view.setUint8(offset + index, value.charCodeAt(index));
+      }
+    }
+  </script>
+</body>
+</html>

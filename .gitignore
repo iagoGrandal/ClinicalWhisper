@@ -3,6 +3,7 @@
 *.pdf
 venv/
 .venv/
+data/patients/*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
